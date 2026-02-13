@@ -20,3 +20,9 @@ typer
 questionary
 langchain_anthropic
 langchain-google-genai
+
+# OpenBB Platform — Phase 1 (free providers only)
+openbb
+openbb-yfinance
+openbb-sec
+openbb-fred

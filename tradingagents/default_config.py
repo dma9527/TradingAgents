@@ -21,11 +21,14 @@ DEFAULT_CONFIG = {
     "max_recur_limit": 100,
     # Data vendor configuration
     # Category-level configuration (default for all tools in category)
+    # Available vendors: yfinance, alpha_vantage, openbb
     "data_vendors": {
-        "core_stock_apis": "yfinance",       # Options: alpha_vantage, yfinance
-        "technical_indicators": "yfinance",  # Options: alpha_vantage, yfinance
-        "fundamental_data": "yfinance",      # Options: alpha_vantage, yfinance
-        "news_data": "yfinance",             # Options: alpha_vantage, yfinance
+        "core_stock_apis": "yfinance",       # Options: openbb, alpha_vantage, yfinance
+        "technical_indicators": "yfinance",  # Options: openbb, alpha_vantage, yfinance
+        "fundamental_data": "yfinance",      # Options: openbb, alpha_vantage, yfinance
+        "news_data": "yfinance",             # Options: openbb, alpha_vantage, yfinance
+        "macro_data": "openbb",              # Options: openbb (exclusive)
+        "sec_data": "openbb",                # Options: openbb (exclusive)
     },
     # Tool-level configuration (takes precedence over category-level)
     "tool_vendors": {

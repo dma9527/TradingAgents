@@ -22,6 +22,21 @@ from .alpha_vantage import (
     get_news as get_alpha_vantage_news,
     get_global_news as get_alpha_vantage_global_news,
 )
+from .openbb_provider import (
+    get_stock_data as get_openbb_stock,
+    get_indicators as get_openbb_indicators,
+    get_fundamentals as get_openbb_fundamentals,
+    get_balance_sheet as get_openbb_balance_sheet,
+    get_cashflow as get_openbb_cashflow,
+    get_income_statement as get_openbb_income_statement,
+    get_insider_transactions as get_openbb_insider_transactions,
+    get_news as get_openbb_news,
+    get_global_news as get_openbb_global_news,
+    # New capabilities only available via OpenBB
+    get_sec_filings,
+    get_economic_indicators,
+    get_market_overview,
+)
 from .alpha_vantage_common import AlphaVantageRateLimitError
 
 # Configuration and routing logic
@@ -57,55 +72,89 @@ TOOLS_CATEGORIES = {
             "get_global_news",
             "get_insider_transactions",
         ]
+    },
+    "macro_data": {
+        "description": "Macroeconomic indicators and market overview (OpenBB only)",
+        "tools": [
+            "get_economic_indicators",
+            "get_market_overview",
+        ]
+    },
+    "sec_data": {
+        "description": "SEC filings and regulatory data (OpenBB only)",
+        "tools": [
+            "get_sec_filings",
+        ]
     }
 }
 
 VENDOR_LIST = [
     "yfinance",
     "alpha_vantage",
+    "openbb",
 ]
 
 # Mapping of methods to their vendor-specific implementations
 VENDOR_METHODS = {
     # core_stock_apis
     "get_stock_data": {
+        "openbb": get_openbb_stock,
         "alpha_vantage": get_alpha_vantage_stock,
         "yfinance": get_YFin_data_online,
     },
     # technical_indicators
     "get_indicators": {
+        "openbb": get_openbb_indicators,
         "alpha_vantage": get_alpha_vantage_indicator,
         "yfinance": get_stock_stats_indicators_window,
     },
     # fundamental_data
     "get_fundamentals": {
+        "openbb": get_openbb_fundamentals,
         "alpha_vantage": get_alpha_vantage_fundamentals,
         "yfinance": get_yfinance_fundamentals,
     },
     "get_balance_sheet": {
+        "openbb": get_openbb_balance_sheet,
         "alpha_vantage": get_alpha_vantage_balance_sheet,
         "yfinance": get_yfinance_balance_sheet,
     },
     "get_cashflow": {
+        "openbb": get_openbb_cashflow,
         "alpha_vantage": get_alpha_vantage_cashflow,
         "yfinance": get_yfinance_cashflow,
     },
     "get_income_statement": {
+        "openbb": get_openbb_income_statement,
         "alpha_vantage": get_alpha_vantage_income_statement,
         "yfinance": get_yfinance_income_statement,
     },
     # news_data
     "get_news": {
+        "openbb": get_openbb_news,
         "alpha_vantage": get_alpha_vantage_news,
         "yfinance": get_news_yfinance,
     },
     "get_global_news": {
+        "openbb": get_openbb_global_news,
         "yfinance": get_global_news_yfinance,
         "alpha_vantage": get_alpha_vantage_global_news,
     },
     "get_insider_transactions": {
+        "openbb": get_openbb_insider_transactions,
         "alpha_vantage": get_alpha_vantage_insider_transactions,
         "yfinance": get_yfinance_insider_transactions,
+    },
+    # macro_data (OpenBB exclusive)
+    "get_economic_indicators": {
+        "openbb": get_economic_indicators,
+    },
+    "get_market_overview": {
+        "openbb": get_market_overview,
+    },
+    # sec_data (OpenBB exclusive)
+    "get_sec_filings": {
+        "openbb": get_sec_filings,
     },
 }
 
