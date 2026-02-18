@@ -2,6 +2,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 import time
 import json
 from tradingagents.agents.utils.agent_utils import get_stock_data, get_indicators, get_economic_indicators, get_market_overview
+from tradingagents.agents.utils.advanced_indicator_tools import get_advanced_analysis, get_fsvzo, get_hull_trend
 from tradingagents.dataflows.config import get_config
 
 
@@ -13,40 +14,48 @@ def create_market_analyst(llm):
         company_name = state["company_of_interest"]
 
         tools = [
+            get_advanced_analysis,  # PRIMARY: FSVZO + Hull + NMA + BB + VWAP
+            get_fsvzo,              # Detailed FSVZO with divergence
+            get_hull_trend,         # Detailed Hull + Kahlman trend
             get_stock_data,
-            get_indicators,
+            get_indicators,         # Legacy stockstats indicators (fallback)
             get_economic_indicators,
             get_market_overview,
         ]
 
         system_message = (
-            """You are a trading assistant tasked with analyzing financial markets. Your role is to select the **most relevant indicators** for a given market condition or trading strategy from the following list. The goal is to choose up to **8 indicators** that provide complementary insights without redundancy. Categories and each category's indicators are:
+            """You are a trading assistant tasked with analyzing financial markets using advanced technical analysis algorithms.
 
-Moving Averages:
-- close_50_sma: 50 SMA: A medium-term trend indicator. Usage: Identify trend direction and serve as dynamic support/resistance. Tips: It lags price; combine with faster indicators for timely signals.
-- close_200_sma: 200 SMA: A long-term trend benchmark. Usage: Confirm overall market trend and identify golden/death cross setups. Tips: It reacts slowly; best for strategic trend confirmation rather than frequent trading entries.
-- close_10_ema: 10 EMA: A responsive short-term average. Usage: Capture quick shifts in momentum and potential entry points. Tips: Prone to noise in choppy markets; use alongside longer averages for filtering false signals.
+## PRIMARY Analysis Tools (Use These First)
 
-MACD Related:
-- macd: MACD: Computes momentum via differences of EMAs. Usage: Look for crossovers and divergence as signals of trend changes. Tips: Confirm with other indicators in low-volatility or sideways markets.
-- macds: MACD Signal: An EMA smoothing of the MACD line. Usage: Use crossovers with the MACD line to trigger trades. Tips: Should be part of a broader strategy to avoid false positives.
-- macdh: MACD Histogram: Shows the gap between the MACD line and its signal. Usage: Visualize momentum strength and spot divergence early. Tips: Can be volatile; complement with additional filters in fast-moving markets.
+**1. get_advanced_analysis** — Your MAIN tool. Runs all advanced indicators at once:
+- **FSVZO (Fourier-Smoothed Volume Zone Oscillator)**: Measures buying vs selling volume pressure with Fourier smoothing and ADF trend filtering. Range -100 to +100. Above 80 = overbought, below -80 = oversold. Includes divergence detection and flow momentum.
+- **Hull Moving Average + Kahlman Filter**: Ultra-low-lag trend detection. Crossovers generate buy/sell signals with minimal delay.
+- **3rd Generation Moving Average (NMA)**: Dual-pass MA that eliminates lag. Price above NMA = bullish, below = bearish.
+- **Bollinger Bands**: Standard 20-period bands with %B (position within bands) and width (volatility measure).
+- **VWAP**: Volume-weighted average price as institutional reference level.
 
-Momentum Indicators:
-- rsi: RSI: Measures momentum to flag overbought/oversold conditions. Usage: Apply 70/30 thresholds and watch for divergence to signal reversals. Tips: In strong trends, RSI may remain extreme; always cross-check with trend analysis.
+**2. get_fsvzo** — Detailed FSVZO readings with divergence detection for the last 20 bars.
+**3. get_hull_trend** — Detailed Hull+Kahlman trend readings with buy/sell signals for the last 20 bars.
 
-Volatility Indicators:
-- boll: Bollinger Middle: A 20 SMA serving as the basis for Bollinger Bands. Usage: Acts as a dynamic benchmark for price movement. Tips: Combine with the upper and lower bands to effectively spot breakouts or reversals.
-- boll_ub: Bollinger Upper Band: Typically 2 standard deviations above the middle line. Usage: Signals potential overbought conditions and breakout zones. Tips: Confirm signals with other tools; prices may ride the band in strong trends.
-- boll_lb: Bollinger Lower Band: Typically 2 standard deviations below the middle line. Usage: Indicates potential oversold conditions. Tips: Use additional analysis to avoid false reversal signals.
-- atr: ATR: Averages true range to measure volatility. Usage: Set stop-loss levels and adjust position sizes based on current market volatility. Tips: It's a reactive measure, so use it as part of a broader risk management strategy.
+## Secondary Analysis Tools (Use as Needed)
 
-Volume-Based Indicators:
-- vwma: VWMA: A moving average weighted by volume. Usage: Confirm trends by integrating price action with volume data. Tips: Watch for skewed results from volume spikes; use in combination with other volume analyses.
+**4. get_indicators** — Legacy stockstats indicators (SMA, EMA, RSI, MACD, ATR, etc.). Use these to supplement the primary analysis when you need specific classic indicators.
 
-- Select indicators that provide diverse and complementary information. Avoid redundancy (e.g., do not select both rsi and stochrsi). Also briefly explain why they are suitable for the given market context. When you tool call, please use the exact name of the indicators provided above as they are defined parameters, otherwise your call will fail. Please make sure to call get_stock_data first to retrieve the CSV that is needed to generate indicators. Then use get_indicators with the specific indicator names. Write a very detailed and nuanced report of the trends you observe. Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions."""
-            + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."""
-            + """ You also have access to macroeconomic tools: use `get_market_overview` for a snapshot of major indices and key rates, and `get_economic_indicators` with FRED series IDs (e.g. FEDFUNDS, DGS10, UNRATE, CPIAUCSL, GDP) to understand the macro environment. Incorporate macro context into your analysis."""
+Available legacy indicators: close_50_sma, close_200_sma, close_10_ema, macd, macds, macdh, rsi, boll, boll_ub, boll_lb, atr, vwma, mfi
+
+## Analysis Workflow
+
+1. **Always call get_advanced_analysis first** to get the full picture from FSVZO, Hull, NMA, BB, and VWAP.
+2. If you need deeper volume-price analysis, call get_fsvzo for detailed divergence data.
+3. If you need precise trend timing, call get_hull_trend for crossover details.
+4. Use get_indicators for any classic indicators not covered by the advanced tools.
+5. Use get_market_overview and get_economic_indicators for macro context.
+6. Call get_stock_data if you need raw OHLCV data.
+
+Write a detailed, nuanced report. Do not simply state trends are mixed — provide specific readings and their implications."""
+            + """ Append a Markdown summary table at the end organizing key findings."""
+            + """ Incorporate macro context from get_market_overview and get_economic_indicators (FRED series: FEDFUNDS, DGS10, UNRATE, CPIAUCSL, GDP)."""
         )
 
         prompt = ChatPromptTemplate.from_messages(
