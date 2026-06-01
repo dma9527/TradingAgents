@@ -74,6 +74,12 @@ class TradingAgentsGraph:
         # Initialize LLMs with provider-specific thinking configuration
         llm_kwargs = self._get_provider_kwargs()
 
+        # Per-request read/connect timeout. Without this, a silently-broken TCP
+        # connection to the LLM provider leaves httpx in recv() forever and
+        # hangs the whole Celery worker. Override via LLM_REQUEST_TIMEOUT.
+        llm_kwargs.setdefault("timeout", float(os.getenv("LLM_REQUEST_TIMEOUT", "120")))
+        llm_kwargs.setdefault("max_retries", int(os.getenv("LLM_MAX_RETRIES", "2")))
+
         # Add callbacks to kwargs if provided (passed to LLM constructor)
         if self.callbacks:
             llm_kwargs["callbacks"] = self.callbacks
