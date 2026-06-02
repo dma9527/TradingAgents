@@ -42,16 +42,17 @@ VALID_MODELS = {
         "claude-3-5-sonnet-20241022",
     ],
     "google": [
+        # Rolling aliases — Google maintains these to point at the current stable
+        # version, so they survive model retirements.
+        "gemini-pro-latest",
+        "gemini-flash-latest",
         # Gemini 3 series (preview)
         "gemini-3.1-pro-preview",
         "gemini-3-flash-preview",
-        # Gemini 2.5 series
+        # Gemini 2.5 series (pinned — Google deprecates on 6-12 month cycle)
         "gemini-2.5-pro",
         "gemini-2.5-flash",
         "gemini-2.5-flash-lite",
-        # Gemini 2.0 series (deprecated but still available)
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
     ],
     "xai": [
         # Grok 4.1 series
