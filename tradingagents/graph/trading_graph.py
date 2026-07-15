@@ -110,8 +110,15 @@ class TradingAgentsGraph:
         # Create tool nodes
         self.tool_nodes = self._create_tool_nodes()
 
-        # Initialize components
-        self.conditional_logic = ConditionalLogic()
+        # Initialize components. Honor the configured debate/risk rounds.
+        # Previously ConditionalLogic() was constructed with no args, so it
+        # silently used the defaults (1/1) and max_debate_rounds /
+        # max_risk_discuss_rounds from config had NO effect — the "deep" depth
+        # tier was broken and there was no way to turn debate off.
+        self.conditional_logic = ConditionalLogic(
+            max_debate_rounds=self.config.get("max_debate_rounds", 1),
+            max_risk_discuss_rounds=self.config.get("max_risk_discuss_rounds", 1),
+        )
         self.graph_setup = GraphSetup(
             self.quick_thinking_llm,
             self.deep_thinking_llm,
