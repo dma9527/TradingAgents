@@ -84,17 +84,37 @@ class TradingAgentsGraph:
         if self.callbacks:
             llm_kwargs["callbacks"] = self.callbacks
 
+        # Deep and quick roles get separate kwargs so the quick role can carry
+        # a tighter output cap and disabled thinking. Config keys are optional;
+        # when absent behaviour is unchanged.
+        deep_kwargs = dict(llm_kwargs)
+        quick_kwargs = dict(llm_kwargs)
+
+        cap_kwarg = self._max_token_kwarg()
+        deep_cap = self.config.get("max_output_tokens_deep")
+        quick_cap = self.config.get("max_output_tokens_quick")
+        if deep_cap:
+            deep_kwargs[cap_kwarg] = int(deep_cap)
+        if quick_cap:
+            quick_kwargs[cap_kwarg] = int(quick_cap)
+
+        # Gemini bills "thinking" tokens at the output rate, so the quick role
+        # (signal extraction, debate turns, summarisation) disables it.
+        quick_thinking = self.config.get("quick_thinking_level")
+        if quick_thinking:
+            quick_kwargs["thinking_level"] = quick_thinking
+
         deep_client = create_llm_client(
             provider=self.config["llm_provider"],
             model=self.config["deep_think_llm"],
             base_url=self.config.get("backend_url"),
-            **llm_kwargs,
+            **deep_kwargs,
         )
         quick_client = create_llm_client(
             provider=self.config["llm_provider"],
             model=self.config["quick_think_llm"],
             base_url=self.config.get("backend_url"),
-            **llm_kwargs,
+            **quick_kwargs,
         )
 
         self.deep_thinking_llm = deep_client.get_llm()
@@ -142,6 +162,11 @@ class TradingAgentsGraph:
 
         # Set up the graph
         self.graph = self.graph_setup.setup_graph(selected_analysts)
+
+    def _max_token_kwarg(self) -> str:
+        """Return the provider's kwarg name for the output-token cap."""
+        provider = self.config.get("llm_provider", "").lower()
+        return "max_output_tokens" if provider == "google" else "max_tokens"
 
     def _get_provider_kwargs(self) -> Dict[str, Any]:
         """Get provider-specific kwargs for LLM client creation."""
@@ -232,7 +257,12 @@ class TradingAgentsGraph:
         return final_state, self.process_signal(final_state["final_trade_decision"])
 
     def _log_state(self, trade_date, final_state):
-        """Log the final state to a JSON file."""
+        """Log the final state to a JSON file.
+
+        Disk persistence is opt-in via PERSIST_EVAL_RESULTS. Each run writes the
+        full multi-agent state (every report, every debate turn), which on a
+        hosted deployment grows without bound and is never read back.
+        """
         self.log_states_dict[str(trade_date)] = {
             "company_of_interest": final_state["company_of_interest"],
             "trade_date": final_state["trade_date"],
@@ -264,6 +294,9 @@ class TradingAgentsGraph:
         }
 
         # Save to file
+        if os.getenv("PERSIST_EVAL_RESULTS", "false").lower() != "true":
+            return
+
         directory = Path(f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/")
         directory.mkdir(parents=True, exist_ok=True)
 

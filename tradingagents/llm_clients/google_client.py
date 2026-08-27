@@ -38,7 +38,15 @@ class GoogleClient(BaseLLMClient):
         """Return configured ChatGoogleGenerativeAI instance."""
         llm_kwargs = {"model": self.model}
 
-        for key in ("timeout", "max_retries", "google_api_key", "callbacks"):
+        # max_output_tokens caps one response. Without it a verbose agent reply
+        # can cost more than an entire cheap-tier analysis.
+        for key in (
+            "timeout",
+            "max_retries",
+            "google_api_key",
+            "callbacks",
+            "max_output_tokens",
+        ):
             if key in self.kwargs:
                 llm_kwargs[key] = self.kwargs[key]
 
