@@ -50,10 +50,13 @@ class GoogleClient(BaseLLMClient):
             if key in self.kwargs:
                 llm_kwargs[key] = self.kwargs[key]
 
-        # Map thinking_level to appropriate API param based on model
-        # Gemini 3 Pro: low, high
-        # Gemini 3 Flash: minimal, low, medium, high
-        # Gemini 2.5: thinking_budget (0=disable, -1=dynamic)
+        # Map thinking_level to the right API knob for the model GENERATION.
+        # Gemini 3: thinking_level (Pro lacks "minimal"). Gemini 2.5:
+        # thinking_budget. Rolling aliases (-latest) hide their generation in
+        # the name, and sending the wrong knob is a hard 400: verified
+        # 2026-09-04, gemini-flash-lite-latest (pointing at a 3.x lite)
+        # rejects thinkingBudget with INVALID_ARGUMENT. For aliases and
+        # unknown versions, send nothing and accept the server default.
         thinking_level = self.kwargs.get("thinking_level")
         if thinking_level:
             model_lower = self.model.lower()
@@ -62,7 +65,7 @@ class GoogleClient(BaseLLMClient):
                 if "pro" in model_lower and thinking_level == "minimal":
                     thinking_level = "low"
                 llm_kwargs["thinking_level"] = thinking_level
-            else:
+            elif "gemini-2.5" in model_lower:
                 # Gemini 2.5: map to thinking_budget
                 llm_kwargs["thinking_budget"] = -1 if thinking_level == "high" else 0
 
